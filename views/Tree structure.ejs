@@ -22,36 +22,35 @@
                 createTree(ele,object);
             });
 
-            function createTree(ele,parentobj){
-                ele.setAttribute('data-display','false');
-                ele.addEventListener('click',function(){
-                    var display = ele.getAttribute('data-display');
+            function createTree(ele,parentobj) {
+                ele.setAttribute('data-display', 'false');
+                ele.addEventListener('click', function () {
+                    var display = $(this).attr('data-display');
 
                     //get Parent margin-left
-                    var parentmargin = $(ele.parentElement).css('margin-left').slice(0,-2);
+                    var parentmargin = $(this).parent().css('margin-left').slice(0,-2);
                     var margin = parseInt(parentmargin)+20;
 
                     if(display === 'false'){
-                        ele.textContent = '[-]';
-                        ele.setAttribute('data-display','true');
+                        $(this).html('[-]');
+                        $(this).attr('data-display','true');
                         $(this).siblings().removeClass('hide');
                         $(this).siblings().addClass('display');
 
                         //create new node
-                        var a = ele.parentNode.lastChild.children;
+                        var a = this.parentNode.lastChild.children;
                         if(a.length === 0){
                             var div = document.createElement('div');
                             var input = document.createElement('input');
 
                             $(div).css('margin-left',margin);
                             input.type = 'text';
-                            ele.parentNode.appendChild(div);
+                            this.parentNode.appendChild(div);
                             div.appendChild(input);
 
 
                             input.addEventListener('keypress',function(e){
-                                //console.log(e.keyCode);
-                                if(input.value === "") return;
+                                if(this.value === "") return;
                                 if(e.keyCode === 13){
                                     var newnode = document.createElement('div');
                                     newnode.innerHTML = input.value + '<span>[+]</span>';
@@ -62,37 +61,80 @@
 
                                     parentobj.children.push({children:[],value:input.value});
 
-                                    input.value = "";
+                                    this.value = "";
                                     console.log(JSON.stringify(object));
                                     createTree(newnode.getElementsByTagName('span')[0],parentobj.children[parentobj.children.length-1]);
                                 }
-                            });
+                            },false);
                         }
 
                     }else{
-                        ele.textContent = '[+]';
-                        ele.setAttribute('data-display','false');
+                        $(this).html('[+]');
+                        $(this).attr('data-display','false');
                         $(this).siblings().removeClass('display');
                         $(this).siblings().addClass('hide');
 
                     }
-
-                });
+                }, false);
             }
 
-            function loadFromJson(obj){
+            function loadFromJson(newnode,parentnode){
+
+                var div = document.createElement('div');
+                div.innerHTML = newnode.value;
+
+                var parentmargin = $(parentnode).css('margin-left').slice(0,-2);
+                var margin = parseInt(parentmargin)+20;
+                console.log(margin);
+                $(div).css('margin-left',margin);
+
+                parentnode.appendChild(div);
+
+                if(newnode.children.length>0){
+                    div.innerHTML += "<span>[-]</span>";
+                    var span = div.getElementsByTagName('span')[0];
+
+                    createTree(span,div);
+
+                    var input = document.createElement('input');
+                    input.type = 'text';
+                    $(input).css('margin-left',margin);
+                    parentnode.appendChild(input);
+                    for(var i=0;i<newnode.children.length;i++){
+                        loadFromJson(newnode.children[i],div);
+                    }
+                }else{
+                    div.innerHTML += "<span>[+]</span>";
+                    var span = div.getElementsByTagName('span')[0];
+
+                    createTree(span,div);
+                }
 
             }
 
             $('a').on('click',function(){
                 this.href += encodeURIComponent(JSON.stringify(object));
-            })
+            });
 
+            $('input[type="file"]').on('change',function(){
+                var filereader = new FileReader();
+                filereader.addEventListener('loadend',function(){
+                    var obj = JSON.parse(decodeURIComponent(this.result));
+                    console.log(obj.children);
+                    //$('#root').empty();
+                    $('#root > span').html('[-]');
+                    obj.children.forEach(function(node){
+                        loadFromJson(node,document.getElementById('root'));
+                    });
+                })
+                filereader.readAsText(this.files[0]);
+            });
         });
     </script>
 </head>
 <body>
-    <div id="test">Root Node <span>[+]</span></div>
+    <div id="root">Root Node <span>[+]</span></div>
     <a href="data:text/json;charset=utf-8," download="data.json">download json</a>
+    <input type="file">
 </body>
 </html>
