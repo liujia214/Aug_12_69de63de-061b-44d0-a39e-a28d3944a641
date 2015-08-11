@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        .display{
+            display: block;
+        }
+        .hide{
+            display: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            var object = {children:[]};
+
+            var span = $('span');
+
+            Array.prototype.forEach.call(span,function(ele){
+                createTree(ele,object);
+            });
+
+            function createTree(ele,parentobj){
+                ele.setAttribute('data-display','false');
+                ele.addEventListener('click',function(){
+                    var display = ele.getAttribute('data-display');
+
+                    //get Parent margin-left
+                    var parentmargin = $(ele.parentElement).css('margin-left').slice(0,-2);
+                    var margin = parseInt(parentmargin)+20;
+
+                    if(display === 'false'){
+                        ele.textContent = '[-]';
+                        ele.setAttribute('data-display','true');
+                        $(this).siblings().removeClass('hide');
+                        $(this).siblings().addClass('display');
+
+                        //create new node
+                        var a = ele.parentNode.lastChild.children;
+                        if(a.length === 0){
+                            var div = document.createElement('div');
+                            var input = document.createElement('input');
+
+                            $(div).css('margin-left',margin);
+                            input.type = 'text';
+                            ele.parentNode.appendChild(div);
+                            div.appendChild(input);
+
+
+                            input.addEventListener('keypress',function(e){
+                                //console.log(e.keyCode);
+                                if(input.value === "") return;
+                                if(e.keyCode === 13){
+                                    var newnode = document.createElement('div');
+                                    newnode.innerHTML = input.value + '<span>[+]</span>';
+                                    $(newnode).css('margin-left',margin);
+                                    div.parentNode.insertBefore(newnode,div);
+
+                                    //push new node to object
+
+                                    parentobj.children.push({children:[],value:input.value});
+
+                                    input.value = "";
+                                    console.log(JSON.stringify(object));
+                                    createTree(newnode.getElementsByTagName('span')[0],parentobj.children[parentobj.children.length-1]);
+                                }
+                            });
+                        }
+
+                    }else{
+                        ele.textContent = '[+]';
+                        ele.setAttribute('data-display','false');
+                        $(this).siblings().removeClass('display');
+                        $(this).siblings().addClass('hide');
+
+                    }
+
+                });
+            }
+
+            function loadFromJson(obj){
+
+            }
+
+            $('a').on('click',function(){
+                this.href += encodeURIComponent(JSON.stringify(object));
+            })
+
+        });
+    </script>
+</head>
+<body>
+    <div id="test">Root Node <span>[+]</span></div>
+    <a href="data:text/json;charset=utf-8," download="data.json">download json</a>
+</body>
+</html>
