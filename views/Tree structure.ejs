@@ -18,18 +18,21 @@
 
             var span = $('span');
 
+            var margin = 20;
             Array.prototype.forEach.call(span,function(ele){
                 createTree(ele,object);
             });
 
-            function createTree(ele,parentobj) {
+            function createTree(ele,parentobj,defaultdisplay) {
                 ele.setAttribute('data-display', 'false');
                 ele.addEventListener('click', function () {
-                    var display = $(this).attr('data-display');
+
+
+                    var display = defaultdisplay? defaultdisplay : $(this).attr('data-display');
 
                     //get Parent margin-left
-                    var parentmargin = $(this).parent().css('margin-left').slice(0,-2);
-                    var margin = parseInt(parentmargin)+20;
+                    //var parentmargin = $(this).parent().css('margin-left').slice(0,-2);
+
 
                     if(display === 'false'){
                         $(this).html('[-]');
@@ -37,6 +40,8 @@
                         $(this).siblings().removeClass('hide');
                         $(this).siblings().addClass('display');
 
+
+                        defaultdisplay = 'true';
                         //create new node
                         var a = this.parentNode.lastChild.children;
                         if(a.length === 0){
@@ -48,29 +53,13 @@
                             this.parentNode.appendChild(div);
                             div.appendChild(input);
 
-
-                            input.addEventListener('keypress',function(e){
-                                if(this.value === "") return;
-                                if(e.keyCode === 13){
-                                    var newnode = document.createElement('div');
-                                    newnode.innerHTML = input.value + '<span>[+]</span>';
-                                    $(newnode).css('margin-left',margin);
-                                    div.parentNode.insertBefore(newnode,div);
-
-                                    //push new node to object
-
-                                    parentobj.children.push({children:[],value:input.value});
-
-                                    this.value = "";
-                                    console.log(JSON.stringify(object));
-                                    createTree(newnode.getElementsByTagName('span')[0],parentobj.children[parentobj.children.length-1]);
-                                }
-                            },false);
+                            inputEvent(input,parentobj,margin);
                         }
 
                     }else{
                         $(this).html('[+]');
                         $(this).attr('data-display','false');
+                        defaultdisplay = 'false';
                         $(this).siblings().removeClass('display');
                         $(this).siblings().addClass('hide');
 
@@ -78,39 +67,100 @@
                 }, false);
             }
 
-            function loadFromJson(newnode,parentnode){
+            function loadFromJson(newnode,parentobj,parentnode,index){
+                //console.log(newnode);
+                //console.log(parentobj);
+                //console.log(parentnode);
+                if(parentnode){
+                    var div = document.createElement('div');
+                    div.innerHTML = newnode.value;
 
-                var div = document.createElement('div');
-                div.innerHTML = newnode.value;
+                    //console.log(margin);
+                    $(div).css('margin-left',margin);
 
-                var parentmargin = $(parentnode).css('margin-left').slice(0,-2);
-                var margin = parseInt(parentmargin)+20;
-                console.log(margin);
-                $(div).css('margin-left',margin);
+                    parentnode.insertBefore(div,parentnode.lastElementChild);
 
-                parentnode.appendChild(div);
+                    if(newnode.children.length>0){
+                        div.innerHTML += "<span>[-]</span>";
+                        var span = div.getElementsByTagName('span')[0];
 
-                if(newnode.children.length>0){
-                    div.innerHTML += "<span>[-]</span>";
-                    var span = div.getElementsByTagName('span')[0];
+                        console.log(parentobj);
+                        console.log(index);
+                        createTree(span,parentobj.children[index],'true');
 
-                    createTree(span,div);
+                        var inputdiv = document.createElement('div');
+                        $(inputdiv).css('margin-left',margin);
+                        var input = document.createElement('input');
+                        input.type = 'text';
+                        inputdiv.appendChild(input);
+                        div.appendChild(inputdiv);
 
+
+                        inputEvent(input,parentobj,margin);
+
+
+                        newnode.children.forEach(function(ele,ind){
+                            loadFromJson(ele,parentobj.children[index],div,ind);
+                        });
+                    }else{
+                        div.innerHTML += "<span>[+]</span>";
+                        var span = div.getElementsByTagName('span')[0];
+                        //console.log(parentobj);
+                        //console.log(parentobj.children);
+                        //console.log(index);
+                        createTree(span,parentobj.children[index]);
+                    }
+
+                }else{
+                    $('#root span').html('[-]');
+                    var inputdiv = document.createElement('div');
+                    $(inputdiv).css('margin-left',20);
                     var input = document.createElement('input');
                     input.type = 'text';
-                    $(input).css('margin-left',margin);
-                    parentnode.appendChild(input);
-                    for(var i=0;i<newnode.children.length;i++){
-                        loadFromJson(newnode.children[i],div);
-                    }
-                }else{
-                    div.innerHTML += "<span>[+]</span>";
-                    var span = div.getElementsByTagName('span')[0];
+                    inputdiv.appendChild(input);
+                    $('#root').append(inputdiv);
 
-                    createTree(span,div);
+                    inputEvent(input,parentobj,20);
+
+                    if(newnode.children.length>0){
+                        newnode.children.forEach(function(ele,index){
+                            loadFromJson(ele,parentobj,document.getElementById('root'),index);
+                        })
+                    }
+
                 }
 
             }
+
+            function inputEvent(input,parentobj,margin){
+                input.addEventListener('keypress',function(e){
+                    if(this.value === "") return;
+                    if(e.keyCode === 13){
+                        var newnode = document.createElement('div');
+                        newnode.innerHTML = input.value + '<span>[+]</span>';
+                        $(newnode).css('margin-left',margin);
+                        input.parentNode.parentNode.insertBefore(newnode,input.parentNode);
+
+                        //push new node to object
+                        var uuid = generateUUID();
+                        //console.log(parentobj);
+                        parentobj.children.push({children:[],value:input.value,uuid:uuid});
+
+                        this.value = "";
+                        createTree(newnode.getElementsByTagName('span')[0],parentobj.children[parentobj.children.length-1]);
+                    }
+                },false);
+            }
+
+            function generateUUID() {
+                var d = new Date().getTime();
+                var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = (d + Math.random()*16)%16 | 0;
+                    d = Math.floor(d/16);
+                    return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+                });
+                return uuid;
+            };
 
             $('a').on('click',function(){
                 this.href += encodeURIComponent(JSON.stringify(object));
@@ -120,21 +170,46 @@
                 var filereader = new FileReader();
                 filereader.addEventListener('loadend',function(){
                     var obj = JSON.parse(decodeURIComponent(this.result));
-                    console.log(obj.children);
-                    //$('#root').empty();
-                    $('#root > span').html('[-]');
-                    obj.children.forEach(function(node){
-                        loadFromJson(node,document.getElementById('root'));
-                    });
+                    if(obj) object = obj;
+                    //console.log(obj);
+                    //console.log(object);
+
+                    console.log('======');
+                    var siblings = $('#root span').siblings();
+                    for(var i =0;i<siblings.length;i++){
+                        document.getElementById('root').removeChild(siblings[i]);
+                    }
+
+                    loadFromJson(obj,object);
+
                 })
                 filereader.readAsText(this.files[0]);
+            });
+
+            $('input[type="checkbox"]').click(function () {
+                $('input[type="text"]').toggleClass('hide');
+            })
+
+            $('#savelocal').click(function(){
+                console.log(object);
+                localStorage.setItem('nodeobj',object);
+                console.log(typeof  localStorage.getItem('nodeobj'));
+                console.log('save to local');
+            });
+
+            $('#loadfromlocal').click(function(){
+                //console.log(localStorage.getItem('nodeobj').children);
+                loadFromJson(localStorage.getItem('nodeobj'),object);
             });
         });
     </script>
 </head>
 <body>
+    <input type="checkbox">hide input
     <div id="root">Root Node <span>[+]</span></div>
     <a href="data:text/json;charset=utf-8," download="data.json">download json</a>
     <input type="file">
+    <button id="savelocal">save local</button>
+    <button id="loadfromlocal">load from local</button>
 </body>
 </html>
