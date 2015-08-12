@@ -21,7 +21,7 @@
             text-decoration: none;
         }
         #root{
-            margin-top: 20px;
+            margin-top: 10px;
         }
         .display{
             display: none;
@@ -111,6 +111,7 @@
             function collpase(span,parentobject){
                 span.addEventListener('click',function(){
                    // console.log(span.textContent);
+                   if($('input:checkbox').prop('checked')) return;
                    if(span.textContent === '[-]'){
                        $(span).siblings().addClass('display');
                        span.textContent = '[+]';
@@ -162,9 +163,17 @@
                 });
             }
 
+            //hide input tag
+            $('input:checkbox').click(function(){
+                if($('input:checkbox').prop('checked')){
+                    $('input[type="text"]').addClass('display');
+                }else{
+                    $('input[type="text"]').removeClass('display');
+                }
+            });
 
 
-
+            //======================================================================
             $('#savejson').on('click',function(){
                 console.log(object);
                 this.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(object));
@@ -193,8 +202,6 @@
                 uploadStructure(JSON.parse(obj));
             });
 
-
-
         });
     </script>
 </head>
@@ -207,6 +214,8 @@
             <li><input id="uploadjson" type="file">upload json</li>
         </ul>
     </div>
+    <br>
+    <input type="checkbox">Hide Input
     <div id="root">Root Node <span>[+]</span></div>
 </body>
 </html>
