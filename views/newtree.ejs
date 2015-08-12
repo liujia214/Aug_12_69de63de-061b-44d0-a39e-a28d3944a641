@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
+    <style>
+        ul{
+            margin: 0;
+            padding: 0;
+        }
+        li{
+            list-style-type: none;
+            display:inline-block;
+            margin: 2px;
+            padding: 2px;
+            border: 1px solid gray;
+            cursor: pointer;
+        }
+        a{
+            text-decoration: none;
+        }
+        #root{
+            margin-top: 20px;
+        }
+        .display{
+            display: none;
+        }
+    </style>
+    <script>
+        $(document).ready(function(){
+
+            var object = {children:[],value:'Root Node'};
+
+            //createTree start
+            createTree(document.getElementById('root'));
+
+            function createTree(parentnode){
+
+                collpase(parentnode.getElementsByTagName('span')[0],object);
+
+            }
+
+            //Node constructure
+            function Node(value,id,children){
+                this.value = value;
+                this.id = id;
+                if(typeof children !== 'undefined'){
+                    this.children = children;
+                }else{
+                    this.children = [];
+                }
+            }
+
+            //newnode render in page
+            Node.prototype.render = function(parentnode,parentobject){
+
+                var newnode = createNewNode(this.value,parentnode,parentobject);
+
+                if(this.children.length > 0){
+                    newnode.getElementsByTagName('span')[0].textContent = '[-]'
+                    createInput(newnode,parentobject.children[parentobject.children.length-1])
+                    console.log(parentobject);
+                    this.children.forEach(function(ele){
+                        var subnode = new Node(ele.value,ele.id,ele.children)
+                        subnode.render(newnode,parentobject.children[parentobject.children.length-1]);
+                    })
+                }else{
+                    newnode.getElementsByTagName('span')[0].textContent = '[+]'
+                }
+
+            }
+
+            //create input tag and add event listener
+            function createInput(parentnode,parentobject){
+                var div = document.createElement('div');
+                $(div).css('margin-left',20);
+                var input = document.createElement('input');
+                input.type = 'text';
+                div.appendChild(input);
+                parentnode.appendChild(div);
+
+                input.addEventListener('keypress',function(e){
+                    if(this.value === '') return;
+                    if(e.keyCode === 13){
+
+                        createNewNode(this.value,parentnode,parentobject);
+                        this.value = '';
+                    }
+                })
+            }
+
+            //create newnode
+            function createNewNode(value,parentnode,parentobject){
+                var newnode = document.createElement('div');
+                newnode.innerHTML = value + '<span>[+]</span>';
+                $(newnode).css('margin-left',20);
+                parentnode.insertBefore(newnode,parentnode.lastChild);
+
+                //console.log(parentobject.children);
+                //download json
+                    var child = new Node(value,generateUUID());
+                    parentobject.children.push(child);
+                    collpase(newnode.getElementsByTagName('span')[0],parentobject.children[parentobject.children.length-1]);
+
+
+                return newnode;
+            }
+
+            //span tag collapse
+            function collpase(span,parentobject){
+                span.addEventListener('click',function(){
+                   // console.log(span.textContent);
+                   if(span.textContent === '[-]'){
+                       $(span).siblings().addClass('display');
+                       span.textContent = '[+]';
+
+                   }else{
+                       span.textContent = '[-]';
+                       if(span.nextElementSibling){
+                           $(span).siblings().removeClass('display');
+                       }else{
+                           createInput(span.parentNode,parentobject);
+                       }
+                   }
+                });
+            }
+
+            //create uuid
+            function generateUUID() {
+                var d = new Date().getTime();
+                var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = (d + Math.random()*16)%16 | 0;
+                    d = Math.floor(d/16);
+                    return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+                });
+                return uuid;
+            };
+
+            //upload data from local or json
+            function uploadStructure(obj){
+                var root = document.getElementById('root');
+
+
+                //delete old structure
+                var span = root.getElementsByTagName('span')[0];
+                while(span.nextElementSibling){
+                    root.removeChild(span.nextElementSibling);
+                }
+
+                //create input tag for root node
+                object = {children:[],value:'Root Node'};
+
+                createInput(root,object);
+                span.textContent = '[-]';
+
+
+                //upload subnode
+                obj.children.forEach(function(ele){
+                    var node = new Node(ele.value,ele.id,ele.children);
+                    node.render(root,object);
+                });
+            }
+
+
+
+
+            $('#savejson').on('click',function(){
+                console.log(object);
+                this.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(object));
+
+            });
+
+            $('#savelocal').on('click',function(){
+                console.log(object);
+                localStorage.setItem('treestructure',JSON.stringify(object));
+            });
+
+            $('#uploadjson').on('change',function(){
+               var filereader = new FileReader();
+                filereader.addEventListener('loadend',function(){
+
+                    //parse json file
+                    var obj = JSON.parse(decodeURIComponent(this.result));
+                    uploadStructure(obj);
+
+                })
+                filereader.readAsText(this.files[0]);
+            });
+
+            $('#uploadlocal').on('click',function(){
+                var obj = localStorage.getItem('treestructure');
+                uploadStructure(JSON.parse(obj));
+            });
+
+
+
+        });
+    </script>
+</head>
+<body>
+    <div>
+        <ul>
+            <li><a id="savejson" download="data.json" style="color: black">save json</a></li>
+            <li id="savelocal">save local</li>
+            <li id="uploadlocal">upload from local</li>
+            <li><input id="uploadjson" type="file">upload json</li>
+        </ul>
+    </div>
+    <div id="root">Root Node <span>[+]</span></div>
+</body>
+</html>
